@@ -34,6 +34,7 @@
       "@mongodb/*": ["src/mongodb/*"],
       "@commands/*": ["src/commands/*"],
       "@helpers/*": ["src/helpers/*"],
+      "@events/*": ["src/events/*"],
       "@shared/*": ["src/shared/*"]
     },                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
