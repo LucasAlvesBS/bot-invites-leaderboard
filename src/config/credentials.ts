@@ -7,4 +7,5 @@ export const credentials = {
   databaseUrl: process.env.DATABASE_URL || '',
   botId: process.env.BOT_ID || '',
   guildId: process.env.GUILD_ID || '',
+  inviteChannel: process.env.INVITE_CHANNEL,
 };

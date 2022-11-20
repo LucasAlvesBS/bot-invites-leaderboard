@@ -4,8 +4,9 @@ import { registerCommands } from '@commands/register-commands';
 import { credentials } from '@config/credentials';
 import { inviteTracker } from '@events/invite-tracker.event';
 import { checkDiscordToken } from '@helpers/functions/discord-token.function';
-import { connectMongoDB } from '@mongodb/connection';
 import { Client, GatewayIntentBits, Partials, REST } from 'discord.js';
+import '@shared/typeorm';
+import 'reflect-metadata';
 
 const client = new Client({
   intents: [
@@ -13,6 +14,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.GuildPresences,
   ],
   partials: [Partials.Channel],
 });
@@ -26,8 +28,6 @@ client.login(credentials.discordToken);
 client.on('ready', () => {
   console.log('Discord ready to start');
 });
-
-connectMongoDB();
 
 inviteTracker(client);
 
