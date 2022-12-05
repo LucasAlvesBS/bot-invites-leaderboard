@@ -1,10 +1,9 @@
 import { credentials } from '@config/credentials';
 import { REST, Routes } from 'discord.js';
 import { leaderboardBuild } from './builders/leaderboard.build';
-import { resetLeaderboardBuild } from './builders/reset-leaderboard.build';
 
 export const registerCommands = async (rest: REST) => {
-  const commands = [leaderboardBuild, resetLeaderboardBuild];
+  const commands = [leaderboardBuild];
   try {
     console.log(`Started refreshing application (/) commands.`);
 

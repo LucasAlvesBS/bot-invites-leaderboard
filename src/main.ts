@@ -1,11 +1,9 @@
 import { leaderboardInteraction } from '@commands/interactions/leaderboard.interaction';
-import { resetLeaderboardInteraction } from '@commands/interactions/reset-leaderboard.interaction';
 import { registerCommands } from '@commands/register-commands';
 import { credentials } from '@config/credentials';
 import { inviteTracker } from '@events/invite-tracker.event';
-import { checkDiscordToken } from '@helpers/functions/discord-token.function';
+import { checkDiscordToken } from '@helpers/functions/tokens/discord-token.function';
 import { Client, GatewayIntentBits, Partials, REST } from 'discord.js';
-import '@shared/typeorm';
 import 'reflect-metadata';
 
 const client = new Client({
@@ -34,5 +32,3 @@ inviteTracker(client);
 registerCommands(rest);
 
 leaderboardInteraction(client);
-
-resetLeaderboardInteraction(client);

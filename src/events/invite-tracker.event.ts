@@ -1,9 +1,17 @@
-import { credentials } from '@config/credentials';
-import { Inviter } from '@shared/typeorm/entities/inviter.entity';
-import { Member } from '@shared/typeorm/entities/members.entity';
 import { Client, Collection, Invite, TextChannel } from 'discord.js';
-import { createQueryBuilder, getRepository } from 'typeorm';
 import { promisify } from 'util';
+import axios from 'axios';
+import { credentials } from '@config/credentials';
+import { IInvitersDetails } from '@shared/interfaces/inviters-details.interface';
+import { IMembersDetails } from '@shared/interfaces/members-details.interface';
+import { getAxios } from '@helpers/functions/axios/get.axios';
+import { checkInviterOnEntry } from '@helpers/functions/interactions/inviters/check-inviter-entry.interaction';
+import { postAxios } from '@helpers/functions/axios/post.axios';
+import { patchAxios } from '@helpers/functions/axios/patch.axios';
+import { checkMemberOnExit } from '@helpers/functions/interactions/members/check-member-exit.interaction';
+import { deleteAxios } from '@helpers/functions/axios/delete.axios';
+import { getMemberAsInviter } from '@helpers/functions/interactions/inviters/get-member-as-inviter.interaction';
+import { IInviter } from '@shared/interfaces/inviter.interface';
 
 export const inviteTracker = async (client: Client) => {
   const invites = new Collection();
@@ -53,6 +61,10 @@ export const inviteTracker = async (client: Client) => {
   });
 
   client.on('guildMemberAdd', async member => {
+    if (member.user.bot) {
+      return;
+    }
+
     console.log(invites);
     const newInvites = await member.guild.invites.fetch();
     const oldInvites = invites.get(member.guild.id) as Collection<
@@ -71,115 +83,138 @@ export const inviteTracker = async (client: Client) => {
     console.log(a);
 
     const inviter = await client.users.fetch(invite?.inviter?.id || '');
-    console.log(inviter.username);
 
     if (!inviter) {
       return;
     }
 
+    // TESTAR ADICIONAR UM BOT
+    /* if (member.roles.cache.some(role => role.id === '1035521988376154264')) {
+      return;
+    } */
+
     const logChannel = member.guild.channels.cache.find(
-      channel => channel.id === credentials.inviteChannel,
+      channel => channel.id === '1031649243594768485',
     ) as TextChannel;
 
-    const inviterRepository = getRepository(Inviter);
-    const memberRepository = getRepository(Member);
+    const accountCreationDate = new Date(inviter.createdTimestamp);
+    const currentDate = new Date();
+    const differenceTime = Math.abs(
+      currentDate.getTime() - accountCreationDate.getTime(),
+    );
+    const days = Math.ceil(differenceTime / (1000 * 60 * 60 * 24));
 
-    const user = await inviterRepository.findOne({
-      userId: inviter.id,
-    });
+    axios.defaults.baseURL = credentials.apiURL;
 
-    let invitesTotal: number | undefined;
+    const response = await getAxios(axios, 'inviters');
 
-    if (!user) {
-      const inviteRegister = inviterRepository.create({
+    const data: IInvitersDetails = response.data;
+
+    const inviterOnEntry = checkInviterOnEntry(data, inviter);
+
+    const inviterId = inviterOnEntry?.inviterId;
+    const inviterUserId = inviterOnEntry?.inviterUserId;
+    const totalInvitations = inviterOnEntry?.totalInvitations as number;
+
+    let invitersBody: Record<string, unknown>;
+    let membersBody: Record<string, unknown>;
+
+    if (!inviterUserId) {
+      invitersBody = {
         guildId: member.guild.id,
         userId: inviter.id,
         totalInvitations: 1,
-        occasionalInvitations: 1,
-        daysCounter: 1,
+        daysCounter: days,
         invalidAccount: false,
-      });
-      await inviterRepository.save(inviteRegister);
-      invitesTotal = inviteRegister.totalInvitations;
+      };
 
-      const memberRegister = memberRepository.create({
+      const inviterResponse = await postAxios(axios, 'inviters', invitersBody);
+
+      const data: IInviter = inviterResponse.data;
+
+      membersBody = {
         guildId: member.guild.id,
         userId: member.id,
-        inviter: inviteRegister,
-      });
+        inviter: data.id,
+      };
 
-      await memberRepository.save(memberRegister);
+      await postAxios(axios, 'members', membersBody);
+
+      logChannel.send(
+        `${member} joined using invite code ${
+          invite?.code || ''
+        } from ${inviter} and now has ${data.totalInvitations} invites.`,
+      );
     } else {
-      inviterRepository.merge(user, {
-        totalInvitations: user.totalInvitations + 1,
-        occasionalInvitations: user.occasionalInvitations + 1,
-      });
-      await inviterRepository.save(user);
+      invitersBody = {
+        totalInvitations: totalInvitations + 1,
+      };
 
-      const userUpdated = await inviterRepository.findOne({
-        userId: inviter.id,
-      });
+      const patchResponse = await patchAxios(
+        axios,
+        'inviters',
+        inviterId,
+        invitersBody,
+      );
 
-      invitesTotal = userUpdated?.totalInvitations;
+      const data: IInviter = patchResponse.data;
+
+      console.log(patchResponse.data);
+
+      membersBody = {
+        guildId: member.guild.id,
+        userId: member.id,
+        inviter: inviterId,
+      };
+
+      await postAxios(axios, 'members', membersBody);
+
+      logChannel.send(
+        `${member} joined using invite code ${
+          invite?.code || ''
+        } from ${inviter} and now has ${data.totalInvitations} invites.`,
+      );
     }
-
-    logChannel.send(
-      `${member} joined using invite code ${
-        invite?.code || ''
-      } from ${inviter} and now has ${invitesTotal} invites.`,
-    );
   });
 
   client.on('guildMemberRemove', async member => {
-    let invitesTotal: number | undefined;
+    axios.defaults.baseURL = credentials.apiURL;
 
-    const memberWhoLeft = await createQueryBuilder(Member, 'members')
-      .leftJoinAndSelect('members.inviter', 'inviter')
-      .select([
-        'inviter.user_id',
-        'inviter.total_invitations',
-        'inviter.occasional_invitations',
-      ])
-      .where('user_id = :user_id', { userId: member.id })
-      .getOne();
+    const membersResponse = await getAxios(axios, 'members');
 
-    if (memberWhoLeft?.inviter === null) {
-      return;
-    }
+    const memberData: IMembersDetails = membersResponse.data;
 
-    const inviterRepository = getRepository(Inviter);
+    const memberOnExit = checkMemberOnExit(memberData, member);
 
-    if (memberWhoLeft) {
-      await inviterRepository.update(
-        { userId: memberWhoLeft?.inviter.userId },
-        {
-          totalInvitations: memberWhoLeft.inviter.totalInvitations - 1,
-        },
-      );
+    const memberId = memberOnExit?.memberId;
+    const userId = memberOnExit?.userId;
+    const inviterId = memberOnExit?.inviterId;
+    const totalInvitations = memberOnExit?.totalInvitations as number;
 
-      const userUpdated = await inviterRepository.findOne({
-        userId: memberWhoLeft?.inviter.userId,
-      });
+    if (!userId) return;
 
-      invitesTotal = userUpdated?.totalInvitations;
-    }
+    const body = {
+      totalInvitations: totalInvitations - 1,
+    };
 
-    const checkMemberLikeInviter = await inviterRepository.findOne({
-      userId: member.id,
-    });
+    await patchAxios(axios, 'inviters', inviterId, body);
 
-    if (checkMemberLikeInviter) {
-      await inviterRepository.delete({
-        userId: member.id,
-      });
+    await deleteAxios(axios, 'members', memberId);
+
+    const invitersResponse = await getAxios(axios, 'inviters');
+
+    const inviterData: IInvitersDetails = invitersResponse.data;
+
+    const memberIdAsInviter = getMemberAsInviter(inviterData, userId);
+
+    if (memberIdAsInviter) {
+      await deleteAxios(axios, 'inviters', memberIdAsInviter);
     }
 
     const logChannel = member.guild.channels.cache.find(
-      channel => channel.id === credentials.inviteChannel,
+      channel => channel.id === '1031649243594768485',
     ) as TextChannel;
 
-    logChannel.send(
-      `${member} left and now ${memberWhoLeft?.inviter.userId} has ${invitesTotal} invites.`,
-    );
+    logChannel.send(`${member} left.`);
   });
 };

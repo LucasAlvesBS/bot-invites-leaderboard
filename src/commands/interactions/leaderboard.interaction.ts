@@ -1,56 +1,61 @@
-import invitationsSchema from '@mongodb/schemas/invitations.schema';
+import axios from 'axios';
+import https from 'https';
 import { Client, EmbedBuilder } from 'discord.js';
+import { IInvitersDetails } from '@shared/interfaces/inviters-details.interface';
+import { credentials } from '@config/credentials';
 
 export const leaderboardInteraction = (client: Client) => {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'leaderboard') {
-      //await interaction.deferReply();
+      await interaction.deferReply({ ephemeral: true });
 
-      let serverData = await invitationsSchema
-        .find({ guildId: interaction.guild?.id })
-        .sort([['numberInvitation', 'descending']])
-        .exec();
+      axios.defaults.baseURL = credentials.apiURL;
 
-      serverData = serverData.slice(0, 10);
+      const response = await axios.get(`/api/inviters?page=1&limit=999999`, {
+        httpsAgent: new https.Agent({ keepAlive: true }),
+      });
 
-      if (!serverData) {
-        await interaction.reply({
-          content: 'Ainda não há nenhum dado salvo registrado.',
+      const data: IInvitersDetails = response.data;
+      const invitersRank = data.inviters.slice(0, 10);
+
+      if (!invitersRank) {
+        await interaction.editReply({
+          content: `Ainda não há nenhum \`inviter\` registrado.`,
         });
       }
 
-      const userPosition =
-        serverData.findIndex(
-          userData => userData.userId === interaction.user.id,
+      const inviterPosition =
+        invitersRank.findIndex(
+          inviterData => inviterData.userId === interaction.user.id,
         ) + 1;
 
-      const positions = serverData
+      const positions = invitersRank
         .map(
           (data, index) =>
             `${
               index === 0
                 ? '1️⃣'
-                : index + 1
+                : index === 1
                 ? '2️⃣'
-                : index + 1
+                : index === 2
                 ? '3️⃣'
-                : index + 1
+                : index === 3
                 ? '4️⃣'
-                : index + 1
+                : index === 4
                 ? '5️⃣'
-                : index + 1
+                : index === 5
                 ? '6️⃣'
-                : index + 1
+                : index === 6
                 ? '7️⃣'
-                : index + 1
+                : index === 7
                 ? '8️⃣'
-                : index + 1
+                : index === 8
                 ? '9️⃣'
                 : '🔟'
             } **${client.users.cache.get(data.userId)?.tag}** - \`${
-              data.numberInvitation
+              data.totalInvitations
             } convite(s)\``,
         )
         .join('\n');
@@ -60,12 +65,12 @@ export const leaderboardInteraction = (client: Client) => {
         .setDescription(`${positions}`)
         .setColor('Green')
         .setFooter({
-          text: `Você se encontra na posição ${userPosition}`,
+          text: `Você se encontra na posição ${inviterPosition}`,
           iconURL: interaction.user.displayAvatarURL({}),
         })
         .setTimestamp();
 
-      interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
   });
 };
