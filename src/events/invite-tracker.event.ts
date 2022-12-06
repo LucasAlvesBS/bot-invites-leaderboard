@@ -84,14 +84,15 @@ export const inviteTracker = async (client: Client) => {
 
     const inviter = await client.users.fetch(invite?.inviter?.id || '');
 
-    if (!inviter) {
+    if (
+      !inviter ||
+      inviter.id === member.id ||
+      member.guild.members.cache
+        .get(inviter.id)
+        ?.roles.cache.some(role => role.id === '1035521988376154264')
+    ) {
       return;
     }
-
-    // TESTAR ADICIONAR UM BOT
-    /* if (member.roles.cache.some(role => role.id === '1035521988376154264')) {
-      return;
-    } */
 
     const logChannel = member.guild.channels.cache.find(
       channel => channel.id === '1031649243594768485',

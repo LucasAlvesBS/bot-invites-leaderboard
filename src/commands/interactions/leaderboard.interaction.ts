@@ -1,8 +1,9 @@
 import axios from 'axios';
-import https from 'https';
 import { Client, EmbedBuilder } from 'discord.js';
 import { IInvitersDetails } from '@shared/interfaces/inviters-details.interface';
 import { credentials } from '@config/credentials';
+import { getAxios } from '@helpers/functions/axios/get.axios';
+import { putInPluralOrSingular } from '@helpers/functions/interactions/members/put-in-plural-or-singular.interaction';
 
 export const leaderboardInteraction = (client: Client) => {
   client.on('interactionCreate', async interaction => {
@@ -13,9 +14,7 @@ export const leaderboardInteraction = (client: Client) => {
 
       axios.defaults.baseURL = credentials.apiURL;
 
-      const response = await axios.get(`/api/inviters?page=1&limit=999999`, {
-        httpsAgent: new https.Agent({ keepAlive: true }),
-      });
+      const response = await getAxios(axios, 'inviters');
 
       const data: IInvitersDetails = response.data;
       const invitersRank = data.inviters.slice(0, 10);
@@ -56,17 +55,22 @@ export const leaderboardInteraction = (client: Client) => {
                 : '🔟'
             } **${client.users.cache.get(data.userId)?.tag}** - \`${
               data.totalInvitations
-            } convite(s)\``,
+            } ${putInPluralOrSingular(data.totalInvitations)}\``,
         )
         .join('\n');
 
       const embed = new EmbedBuilder()
         .setTitle('Leaderboard')
         .setDescription(`${positions}`)
-        .setColor('Green')
+        .setColor('White')
+        .addFields({
+          name: 'Your position',
+          value: `#${inviterPosition}`,
+          inline: true,
+        })
         .setFooter({
-          text: `Você se encontra na posição ${inviterPosition}`,
-          iconURL: interaction.user.displayAvatarURL({}),
+          text: 'Powered by Havaianas',
+          iconURL: interaction.guild?.iconURL() || undefined,
         })
         .setTimestamp();
 
