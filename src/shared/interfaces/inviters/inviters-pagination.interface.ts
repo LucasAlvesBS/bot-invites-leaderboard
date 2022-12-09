@@ -1,6 +1,6 @@
 import { IInviter } from './inviter.interface';
 
-export interface IInvitersDetails {
+export interface IInvitersPagination {
   page: number;
   size: number;
   totalInviters: number;

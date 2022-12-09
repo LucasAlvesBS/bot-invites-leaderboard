@@ -1,7 +1,8 @@
 import { leaderboardInteraction } from '@commands/interactions/leaderboard.interaction';
 import { registerCommands } from '@commands/register-commands';
 import { credentials } from '@config/credentials';
-import { inviteTracker } from '@events/invite-tracker.event';
+import { callInvitesEvent } from '@events/invites.event';
+import { callWelcomeEvent } from '@events/welcome.event';
 import { checkDiscordToken } from '@helpers/functions/tokens/discord-token.function';
 import { Client, GatewayIntentBits, Partials, REST } from 'discord.js';
 import 'reflect-metadata';
@@ -27,7 +28,9 @@ client.on('ready', () => {
   console.log('Discord ready to start');
 });
 
-inviteTracker(client);
+callInvitesEvent(client);
+
+callWelcomeEvent(client);
 
 registerCommands(rest);
 

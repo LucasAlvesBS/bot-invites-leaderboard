@@ -1,7 +1,10 @@
-import { IInvitersDetails } from '@shared/interfaces/inviters-details.interface';
+import { IInvitersPagination } from '@shared/interfaces/inviters/inviters-pagination.interface';
 import { User } from 'discord.js';
 
-export const checkInviterOnEntry = (data: IInvitersDetails, inviter: User) => {
+export const checkInviterOnEntry = (
+  data: IInvitersPagination,
+  inviter: User,
+) => {
   for (let i = 0; i < data.inviters.length; i++) {
     if (data.inviters[i].userId === inviter.id) {
       const inviterId = data.inviters[i].id;

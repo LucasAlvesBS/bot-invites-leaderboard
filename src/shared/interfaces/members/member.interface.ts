@@ -1,4 +1,4 @@
-import { IInviter } from './inviter.interface';
+import { IInviter } from '../inviters/inviter.interface';
 
 export interface IMember {
   id: string;

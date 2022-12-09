@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { Client, EmbedBuilder } from 'discord.js';
-import { IInvitersDetails } from '@shared/interfaces/inviters-details.interface';
 import { credentials } from '@config/credentials';
 import { getAxios } from '@helpers/functions/axios/get.axios';
 import { putInPluralOrSingular } from '@helpers/functions/interactions/members/put-in-plural-or-singular.interaction';
+import { IInvitersPagination } from '@shared/interfaces/inviters/inviters-pagination.interface';
+import { checkPosition } from '@helpers/functions/interactions/inviters/check-position.interaction';
 
 export const leaderboardInteraction = (client: Client) => {
   client.on('interactionCreate', async interaction => {
@@ -16,12 +17,12 @@ export const leaderboardInteraction = (client: Client) => {
 
       const response = await getAxios(axios, 'inviters');
 
-      const data: IInvitersDetails = response.data;
+      const data: IInvitersPagination = response.data;
       const invitersRank = data.inviters.slice(0, 10);
 
       if (!invitersRank) {
         await interaction.editReply({
-          content: `Ainda não há nenhum \`inviter\` registrado.`,
+          content: 'there are no inviters registered yet',
         });
       }
 
@@ -35,24 +36,24 @@ export const leaderboardInteraction = (client: Client) => {
           (data, index) =>
             `${
               index === 0
-                ? '1️⃣'
+                ? ':one:'
                 : index === 1
-                ? '2️⃣'
+                ? ':two:'
                 : index === 2
-                ? '3️⃣'
+                ? ':three:'
                 : index === 3
-                ? '4️⃣'
+                ? ':four:'
                 : index === 4
-                ? '5️⃣'
+                ? ':five:'
                 : index === 5
-                ? '6️⃣'
+                ? ':six:'
                 : index === 6
-                ? '7️⃣'
+                ? ':seven:'
                 : index === 7
-                ? '8️⃣'
+                ? ':eight:'
                 : index === 8
-                ? '9️⃣'
-                : '🔟'
+                ? ':nine:'
+                : ':keycap_ten:'
             } **${client.users.cache.get(data.userId)?.tag}** - \`${
               data.totalInvitations
             } ${putInPluralOrSingular(data.totalInvitations)}\``,
@@ -60,14 +61,20 @@ export const leaderboardInteraction = (client: Client) => {
         .join('\n');
 
       const embed = new EmbedBuilder()
-        .setTitle('Leaderboard')
-        .setDescription(`${positions}`)
+        .setDescription(':rocket: **Leaderboard**\n\n' + `${positions}`)
         .setColor('White')
-        .addFields({
-          name: 'Your position',
-          value: `#${inviterPosition}`,
-          inline: true,
-        })
+        .addFields(
+          {
+            name: 'Your position',
+            value: checkPosition(inviterPosition),
+            inline: true,
+          },
+          {
+            name: 'Total inviters',
+            value: `\`${data.inviters.length}\``,
+            inline: true,
+          },
+        )
         .setFooter({
           text: 'Powered by Havaianas',
           iconURL: interaction.guild?.iconURL() || undefined,

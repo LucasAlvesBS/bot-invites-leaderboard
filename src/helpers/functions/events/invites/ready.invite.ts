@@ -1,7 +1,7 @@
 import { Client, Collection } from 'discord.js';
 import { promisify } from 'util';
 
-export const callReady = (
+export const startReadyInvite = (
   client: Client,
   invites: Collection<unknown, unknown>,
 ) => {
@@ -19,4 +19,6 @@ export const callReady = (
       );
     });
   });
+
+  return invites;
 };

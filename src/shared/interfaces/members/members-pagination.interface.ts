@@ -1,6 +1,6 @@
 import { IMember } from './member.interface';
 
-export interface IMembersDetails {
+export interface IMembersPagination {
   page: number;
   size: number;
   totalMembers: number;
